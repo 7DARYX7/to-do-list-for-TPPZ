@@ -4,171 +4,226 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>To-Do List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f4f4f9;
+            padding: 20px;
             transition: background-color 0.3s, color 0.3s;
         }
         .dark-mode {
             background-color: #2c2c2c;
-            color: #fff;
-        }
-        .container {
-            background: #fff;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            width: 500px;
-            transition: background-color 0.3s;
-        }
-        .dark-mode .container {
-            background: #3e3e3e;
-        }
-        h1 {
-            text-align: center;
-            font-size: 1.8em;
-        }
-        input {
-            width: calc(100% - 60px);
-            padding: 10px;
-            margin-right: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        button {
-            padding: 10px;
-            background: #007bff;
             color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
         }
-        button:hover {
-            background: #0056b3;
+        .task {
+            margin-bottom: 10px;
         }
-        ul {
-            list-style: none;
-            padding: 0;
-            margin: 20px 0 0;
+        .task.completed .task-text {
+            text-decoration: line-through;
+            color: gray;
         }
-        li {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-        }
-        li:last-child {
-            border-bottom: none;
-        }
-        .delete {
-            background: #ff4d4d;
+        .tag {
+            margin-left: 5px;
+            font-size: 0.9em;
             color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
+            background-color: #6c757d;
+            border-radius: 5px;
+            padding: 2px 5px;
         }
-        .delete:hover {
-            background: #cc0000;
-        }
-        .checkbox {
-            margin-right: 10px;
-        }
-        .top-buttons {
-            position: absolute;
-            top: 20px;
+        .center-controls {
             display: flex;
-            gap: 10px;
             justify-content: center;
-            width: 100%;
+            gap: 10px;
         }
-        .theme-toggle, .language-toggle {
-            padding: 10px;
-            background: #007bff;
-            color: white;
+        .control-btn {
+            background: #f0f0f0;
+            border-radius: 50%;
+            padding: 5px;
             border: none;
-            border-radius: 4px;
             cursor: pointer;
         }
-        .theme-toggle:hover, .language-toggle:hover {
-            background: #0056b3;
+        .control-btn img {
+            width: 30px;
+            height: 30px;
+        }
+        .complete-btn {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 1px solid black;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .complete-btn.completed {
+            background-color: green;
         }
     </style>
 </head>
 <body>
-    <div class="top-buttons">
-        <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
-        <button class="language-toggle" onclick="toggleLanguage()">Switch to Russian</button>
-    </div>
     <div class="container">
-        <h1 id="header">To-Do List</h1>
-        <div>
-            <input type="text" id="taskInput" placeholder="Enter a task">
-            <button onclick="addTask()">Add</button>
+        <div class="center-controls mb-3">
+            <button id="toggle-theme" class="control-btn"><img src="theme-icon.png" alt="Toggle Theme"></button>
+            <button id="toggle-language" class="control-btn"><img src="language-icon.png" alt="Toggle Language"></button>
         </div>
-        <ul id="taskList"></ul>
+        <h1 class="mb-4" id="header">To-Do List</h1>
+        <div class="input-group mb-3">
+            <input id="task-input" type="text" class="form-control" placeholder="Enter task">
+            <input id="tag-input" type="text" class="form-control" placeholder="Enter tags (comma-separated)">
+            <button id="add-task-btn" class="btn btn-primary">Add Task</button>
+        </div>
+        <ul id="task-list" class="list-group">
+            <!-- Tasks will appear here -->
+        </ul>
     </div>
 
     <script>
-        let isEnglish = true; // Track current language
+        const taskInput = document.getElementById('task-input');
+        const tagInput = document.getElementById('tag-input');
+        const addTaskBtn = document.getElementById('add-task-btn');
+        const taskList = document.getElementById('task-list');
+        const toggleThemeBtn = document.getElementById('toggle-theme');
+        const toggleLanguageBtn = document.getElementById('toggle-language');
+        const header = document.getElementById('header');
 
-        // Function to add a new task to the list
-        function addTask() {
-            const taskInput = document.getElementById('taskInput'); // Input field where the task is entered
-            const taskList = document.getElementById('taskList'); // The list where tasks are displayed
+        let isDarkMode = false;
+        let isEnglish = true;
 
-            // Check if the input is empty
-            if (taskInput.value.trim() === '') {
-                alert(isEnglish ? 'Please enter a task!' : 'Введите задачу!'); // Show an alert if input is empty
-                return; // Exit the function
-            }
-
-            const li = document.createElement('li'); // Create a new list item element
-            // Set the content of the list item with a checkbox, task text, and delete button
-            li.innerHTML = `<input type="checkbox" class="checkbox" onclick="toggleTask(this)"> ${taskInput.value} <button class="delete" onclick="deleteTask(this)">${isEnglish ? 'Delete' : 'Удалить'}</button>`;
-
-            taskList.appendChild(li); // Add the new task to the list
-            taskInput.value = ''; // Clear the input field
-        }
-
-        // Function to delete a task
-        function deleteTask(button) {
-            const li = button.parentElement; // Find the parent list item of the button
-            li.remove(); // Remove the list item
-        }
-
-        // Function to toggle the task as completed or not
-        function toggleTask(checkbox) {
-            const li = checkbox.parentElement; // Find the parent list item of the checkbox
-            if (checkbox.checked) {
-                li.style.textDecoration = 'line-through'; // Strike through the text
-                li.style.color = 'gray'; // Change text color to gray
-            } else {
-                li.style.textDecoration = 'none'; // Remove strike through
-                li.style.color = 'inherit'; // Reset text color
-            }
-        }
-
-        // Function to toggle between light and dark themes
         function toggleTheme() {
-            document.body.classList.toggle('dark-mode'); // Add or remove the "dark-mode" class to toggle theme
+            document.body.classList.toggle('dark-mode');
+            isDarkMode = !isDarkMode;
         }
 
-        // Function to toggle between English and Russian languages
         function toggleLanguage() {
-            isEnglish = !isEnglish; // Toggle language state
-            document.getElementById('header').innerText = isEnglish ? 'To-Do List' : 'Список дел';
-            document.getElementById('taskInput').placeholder = isEnglish ? 'Enter a task' : 'Введите задачу';
-            document.querySelector('.language-toggle').innerText = isEnglish ? 'Switch to Russian' : 'Переключиться на английский';
+            isEnglish = !isEnglish;
+            header.textContent = isEnglish ? 'To-Do List' : 'Список дел';
+            taskInput.placeholder = isEnglish ? 'Enter task' : 'Введите задачу';
+            tagInput.placeholder = isEnglish ? 'Enter tags (comma-separated)' : 'Введите теги (через запятую)';
+            addTaskBtn.textContent = isEnglish ? 'Add Task' : 'Добавить задачу';
         }
+
+        function loadTasks() {
+            const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+            tasks.forEach(task => addTaskToDOM(task));
+        }
+
+        function saveTasks() {
+            const tasks = Array.from(document.querySelectorAll('.task')).map(task => {
+                return {
+                    text: task.querySelector('.task-text').textContent,
+                    tags: Array.from(task.querySelectorAll('.tag')).map(tag => tag.textContent),
+                    subtasks: Array.from(task.querySelector('.subtasks').children).map(subtask => {
+                        return {
+                            text: subtask.textContent,
+                            completed: subtask.classList.contains('completed')
+                        };
+                    }),
+                    completed: task.classList.contains('completed')
+                };
+            });
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        function addTaskToDOM(task) {
+            const li = document.createElement('li');
+            li.className = 'list-group-item task';
+            if (task.completed) li.classList.add('completed');
+
+            const completeBtn = document.createElement('div');
+            completeBtn.className = 'complete-btn';
+            if (task.completed) completeBtn.classList.add('completed');
+            completeBtn.onclick = () => {
+                completeBtn.classList.toggle('completed');
+                li.classList.toggle('completed');
+                saveTasks();
+            };
+
+            const text = document.createElement('span');
+            text.className = 'task-text';
+            text.textContent = task.text;
+
+            const tagContainer = document.createElement('span');
+            if (task.tags) {
+                task.tags.forEach(tag => {
+                    const tagEl = document.createElement('span');
+                    tagEl.className = 'tag';
+                    tagEl.textContent = tag;
+                    tagContainer.appendChild(tagEl);
+                });
+            }
+
+            const subtaskList = document.createElement('ul');
+            subtaskList.className = 'list-group subtasks';
+            if (task.subtasks) {
+                task.subtasks.forEach(subtask => {
+                    const subtaskEl = document.createElement('li');
+                    subtaskEl.className = 'list-group-item';
+                    subtaskEl.textContent = subtask.text;
+                    if (subtask.completed) subtaskEl.classList.add('completed');
+                    subtaskEl.onclick = () => {
+                        subtaskEl.classList.toggle('completed');
+                        saveTasks();
+                    };
+                    subtaskList.appendChild(subtaskEl);
+                });
+            }
+
+            const addSubtaskBtn = document.createElement('button');
+            addSubtaskBtn.textContent = isEnglish ? 'Add Subtask' : 'Добавить подзадачу';
+            addSubtaskBtn.className = 'btn btn-sm btn-secondary';
+            addSubtaskBtn.onclick = () => {
+                const subtaskText = prompt(isEnglish ? 'Enter subtask:' : 'Введите подзадачу:');
+                if (subtaskText) {
+                    const subtaskEl = document.createElement('li');
+                    subtaskEl.className = 'list-group-item';
+                    subtaskEl.textContent = subtaskText;
+                    subtaskEl.onclick = () => {
+                        subtaskEl.classList.toggle('completed');
+                        saveTasks();
+                    };
+                    subtaskList.appendChild(subtaskEl);
+                    saveTasks();
+                }
+            };
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = isEnglish ? 'Delete' : 'Удалить';
+            deleteBtn.className = 'btn btn-sm btn-danger ms-2';
+            deleteBtn.onclick = () => {
+                li.remove();
+                saveTasks();
+            };
+
+            li.appendChild(completeBtn);
+            li.appendChild(text);
+            li.appendChild(tagContainer);
+            li.appendChild(addSubtaskBtn);
+            li.appendChild(deleteBtn);
+            li.appendChild(subtaskList);
+            taskList.appendChild(li);
+        }
+
+        addTaskBtn.onclick = () => {
+            const text = taskInput.value.trim();
+            const tags = tagInput.value.split(',').map(tag => tag.trim()).filter(tag => tag);
+
+            if (text) {
+                const task = { text, tags, subtasks: [], completed: false };
+                addTaskToDOM(task);
+                saveTasks();
+                taskInput.value = '';
+                tagInput.value = '';
+            }
+        };
+
+        new Sortable(taskList, {
+            animation: 150,
+            onEnd: saveTasks
+        });
+
+        toggleThemeBtn.onclick = toggleTheme;
+        toggleLanguageBtn.onclick = toggleLanguage;
+
+        loadTasks();
     </script>
 </body>
 </html>
